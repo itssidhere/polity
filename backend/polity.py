@@ -10,7 +10,11 @@ import nltk
 from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from flask.globals import request
+
+import datetime
+import snscrape.modules.twitter as sntwitter
+
+
 app = Flask(__name__)
 api = Api(app)
 
@@ -65,21 +69,36 @@ class Prediction(Resource):
 
         args = parser.parse_args()
         return {'prediction': predict(args['query'])}
-    
+
+
 class Twitter(Resource):
-    def get(self):
+    def post(self):
         return {'message': 'Hello, Welcome to the twitter page'}
 
-    def post(self):
+    def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument('query', required=True)
 
         args = parser.parse_args()
-        return {'prediction': predict(args['query'])}
+
+        tweets = []
+        limit = 100
+        for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
+            if len(tweets) == limit:
+                break
+            else:
+                tweets.append([
+                    datetime.datetime.strftime(
+                        tweet.date, '%Y-%m-%d %H:%M:%S'),
+                    tweet.username,
+                    tweet.content])
+
+        return {'tweets': tweets}
 
 
 api.add_resource(Users, '/users')
 api.add_resource(Prediction, '/prediction')
+api.add_resource(Twitter, '/twitter')
 
 if __name__ == '__main__':
     app.run(debug=True)
