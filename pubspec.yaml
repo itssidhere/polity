@@ -43,6 +43,7 @@ dependencies:
   syncfusion_flutter_datepicker: ^20.3.57
   intl: ^0.17.0
   font_awesome_flutter: ^10.2.1
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:

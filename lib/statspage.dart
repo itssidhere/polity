@@ -1,9 +1,10 @@
-import 'package:csv/csv.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:intl/intl.dart';
+import 'package:polity/model/post.dart';
+import 'package:polity/model/twitter.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:syncfusion_flutter_charts/sparkcharts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +18,7 @@ class StatsPage extends StatefulWidget {
 }
 
 class _StatsPageState extends State<StatsPage> {
-  var tableData = <List>[];
+  var tableData = <Post>[];
   var order_map = <int, int>{};
   // one week old timestamp
   var from = DateTime.now().subtract(const Duration(days: 7));
@@ -33,31 +34,37 @@ class _StatsPageState extends State<StatsPage> {
     super.initState();
   }
 
+  Future<List<Tweets>> getDataFromTwitter({required String keyword}) async {
+    var url = 'http://127.0.0.1:5000/twitter?query=${keyword}';
+    var response = await Dio().get(url);
+    var data = <Tweets>[];
+
+    for (var i = 0; i < response.data['tweets'].length; i++) {
+      data.add(Tweets.fromJson(response.data['tweets'][i]));
+    }
+
+    return data;
+
+    // print(response.data['tweets'][0]);
+
+    // return [];
+  }
+
   Future<void> loadAsset() async {
     //load the json file
-    var data =
-        await DefaultAssetBundle.of(context).loadString('ndp_sentiments.csv');
-
-    List<List<dynamic>> csvTable = CsvToListConverter().convert(data);
+    tableData = await getDataFromTwitter(keyword: 'ndp');
 
     //drop the first element of each of the sublist
-    for (var element in csvTable) {
-      element.removeAt(0);
-      for (var entry in element.asMap().entries) {
-        if (entry.key == 3) {
-          if (entry.value == 1.0) {
-            total_positive++;
-          } else {
-            total_negative++;
-          }
-        }
+    for (var element in tableData) {
+      if (element.sentiment.negative > element.sentiment.positive) {
+        total_negative += 1;
+      } else {
+        total_positive += 1;
       }
     }
 
     setState(() {
-      tableData = csvTable;
-      var len = csvTable[0].length;
-      for (var i = 0; i < len; i++) {
+      for (var i = 0; i < 4; i++) {
         order_map[i] = -1;
       }
     });
@@ -319,43 +326,9 @@ class _StatsPageState extends State<StatsPage> {
                 if (tableData.isNotEmpty)
                   PaginatedDataTable(
                     columns: [
-                      ...tableData[0].asMap().entries.map((e) => DataColumn(
-                          label: Row(children: [
-                            Text(e.value.toString()),
-                            IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    if (order_map[e.key] == -1) {
-                                      order_map[e.key] = 1;
-                                    } else if (order_map[e.key] == 1) {
-                                      order_map[e.key] = 0;
-                                    } else {
-                                      order_map[e.key] = -1;
-                                    }
-                                  });
-                                },
-                                icon: Icon(order_map[e.key] == -1
-                                    ? Icons.arrow_right
-                                    : order_map[e.key] == 1
-                                        ? Icons.arrow_upward
-                                        : Icons.arrow_downward))
-                          ]),
-                          onSort: (columnIndex, ascending) {
-                            setState(() {
-                              var temp = tableData.skip(1).toList();
-                              if (order_map[columnIndex] == 1) {
-                                temp.sort((a, b) =>
-                                    b[columnIndex].compareTo(a[columnIndex]));
-                                order_map[columnIndex] = 0;
-                              } else {
-                                temp.sort((a, b) =>
-                                    a[columnIndex].compareTo(b[columnIndex]));
-                                order_map[columnIndex] = 1;
-                              }
-
-                              tableData = [tableData[0], ...temp];
-                            });
-                          })),
+                      DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('Positive')),
+                      DataColumn(label: Text('Negative')),
                     ],
                     source: TweetDataTableSource(tableData),
                   ),
@@ -375,57 +348,17 @@ class _StatsPageState extends State<StatsPage> {
 class TweetDataTableSource extends DataTableSource {
   TweetDataTableSource(this.data);
 
-  final List<List<dynamic>> data;
+  final List<Post> data;
 
   @override
   DataRow getRow(int index) {
     return DataRow.byIndex(
       index: index,
       cells: [
-        ...data[index + 1].asMap().entries.map((e) {
-          var text = e.value.toString();
-          //if text is a number, make it a double
-          if (e.key > 2) {
-            var n = double.parse(text);
-            var child;
-            if (n == 1.0 || n == 0.0) {
-              child = Icon(
-                  n == 1
-                      ? Icons.sentiment_very_satisfied
-                      : Icons.sentiment_very_dissatisfied,
-                  color: n == 1 ? Colors.green : Colors.red);
-            } else {
-              //trim the number to 2 decimal places
-              text = n.toStringAsFixed(2);
-              child = Text(text);
-            }
-            return DataCell(ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: child,
-              ),
-            ));
-          }
-          var child;
-          if (e.key == 1) {
-            child = TextButton(
-                onPressed: () {
-                  //open the tweet in a browser
-                  launchUrlString('https://www.twitter.com/$text');
-                },
-                child: Text('@$text'));
-          } else {
-            child = SelectableText(text);
-          }
-          return DataCell(ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: child,
-            ),
-          ));
-        }),
+        DataCell(Text(data[index].date.toString())),
+        DataCell(Text(data[index].userid.toString())),
+        DataCell(Text(data[index].sentiment.positive.toString())),
+        DataCell(Text(data[index].sentiment.negative.toString())),
       ],
     );
   }
@@ -434,7 +367,7 @@ class TweetDataTableSource extends DataTableSource {
   bool get isRowCountApproximate => false;
 
   @override
-  int get rowCount => data.length - 1;
+  int get rowCount => data.length;
 
   @override
   int get selectedRowCount => 0;

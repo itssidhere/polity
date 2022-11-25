@@ -20,7 +20,6 @@ api = Api(app)
 
 
 def remove_noise(tweet_tokens, stop_words=()):
-    nltk.download('omw-1.4')
     cleaned_tokens = []
 
     for token, tag in pos_tag(tweet_tokens):
@@ -44,7 +43,8 @@ def remove_noise(tweet_tokens, stop_words=()):
 
 
 def predict(tweet):
-    f = open('my_classifier.pickle', 'rb')
+    f = open(
+        'C://Users//siddharth//projects//polity//backend//my_classifier.pickle', 'rb')
     classifier = pickle.load(f)
     custom_tokens = remove_noise(word_tokenize(tweet))
     result = classifier.prob_classify(
@@ -82,16 +82,15 @@ class Twitter(Resource):
         args = parser.parse_args()
 
         tweets = []
-        limit = 100
+        limit = 10
         for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
             if len(tweets) == limit:
                 break
             else:
-                tweets.append([
-                    datetime.datetime.strftime(
-                        tweet.date, '%Y-%m-%d %H:%M:%S'),
-                    tweet.username,
-                    tweet.content])
+                data = {'tweet': tweet.content,
+                        'date': datetime.datetime.strftime(
+                            tweet.date, '%Y-%m-%d %H:%M:%S'), 'uid': tweet.user.username, 'sentiment': predict(tweet.content)}
+                tweets.append(data)
 
         return {'tweets': tweets}
 
@@ -101,4 +100,4 @@ api.add_resource(Prediction, '/prediction')
 api.add_resource(Twitter, '/twitter')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
