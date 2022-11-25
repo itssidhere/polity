@@ -65,6 +65,17 @@ class Prediction(Resource):
 
         args = parser.parse_args()
         return {'prediction': predict(args['query'])}
+    
+class Twitter(Resource):
+    def get(self):
+        return {'message': 'Hello, Welcome to the twitter page'}
+
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('query', required=True)
+
+        args = parser.parse_args()
+        return {'prediction': predict(args['query'])}
 
 
 api.add_resource(Users, '/users')
