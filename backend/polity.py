@@ -10,13 +10,16 @@ import nltk
 from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from flask.globals import request
+
+import datetime
+import snscrape.modules.twitter as sntwitter
+
+
 app = Flask(__name__)
 api = Api(app)
 
 
 def remove_noise(tweet_tokens, stop_words=()):
-    nltk.download('omw-1.4')
     cleaned_tokens = []
 
     for token, tag in pos_tag(tweet_tokens):
@@ -40,7 +43,8 @@ def remove_noise(tweet_tokens, stop_words=()):
 
 
 def predict(tweet):
-    f = open('my_classifier.pickle', 'rb')
+    f = open(
+        'C://Users//siddharth//projects//polity//backend//my_classifier.pickle', 'rb')
     classifier = pickle.load(f)
     custom_tokens = remove_noise(word_tokenize(tweet))
     result = classifier.prob_classify(
@@ -67,8 +71,33 @@ class Prediction(Resource):
         return {'prediction': predict(args['query'])}
 
 
+class Twitter(Resource):
+    def post(self):
+        return {'message': 'Hello, Welcome to the twitter page'}
+
+    def get(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('query', required=True)
+
+        args = parser.parse_args()
+
+        tweets = []
+        limit = 10
+        for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
+            if len(tweets) == limit:
+                break
+            else:
+                data = {'tweet': tweet.content,
+                        'date': datetime.datetime.strftime(
+                            tweet.date, '%Y-%m-%d %H:%M:%S'), 'uid': tweet.user.username, 'sentiment': predict(tweet.content)}
+                tweets.append(data)
+
+        return {'tweets': tweets}
+
+
 api.add_resource(Users, '/users')
 api.add_resource(Prediction, '/prediction')
+api.add_resource(Twitter, '/twitter')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
