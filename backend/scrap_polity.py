@@ -1,19 +1,28 @@
 import snscrape.modules.twitter as sntwitter
+from snscrape.modules.reddit import RedditSearchScraper
+from snscrape.modules.telegram import TelegramChannelScraper
 import pandas as pd
 from tabulate import tabulate
+import json
 
-query = "ucp party alberta since:2020-01-01 until:2022-12-31"
+query = "https://t.me/fly_global"
 tweets = []
 limit = 100
 
 
-for tweet in sntwitter.TwitterSearchScraper(query).get_items():
-    if len(tweets) == limit:
+
+for i, item in TelegramChannelScraper(query).get_items():
+    if(i == limit):
         break
+    print(item)
 
-    elif tweet.coordinates is not None:
-        tweets.append([tweet.date, tweet.username,
-                      tweet.content, tweet.coordinates])
+# scraper = RedditSearchScraper(query)
+# for i, item in enumerate(scraper.get_items()):
+#     if i > limit:
+#         break
 
-df = pd.DataFrame(tweets, columns=['Date', 'User', 'Content', 'Coordinates'])
-df.to_csv('ucp_filtered.csv', index=False)
+#     try:
+#         print(item.json())
+#         print('-----------------')
+#     except:
+#         pass

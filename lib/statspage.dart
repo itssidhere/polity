@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,6 +10,12 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:syncfusion_flutter_charts/sparkcharts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+
+class BarChartData {
+  BarChartData(this.x, this.y);
+  final String x;
+  final int y;
+}
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -27,6 +35,12 @@ class _StatsPageState extends State<StatsPage> {
   var total_negative = 0;
   var total_positive = 0;
   var scrollController = ScrollController();
+
+  Map<DateTime, int> negative_line = <DateTime, int>{};
+  Map<DateTime, int> positive_line = <DateTime, int>{};
+
+  var negativeChartData = <BarChartData>[];
+  var positiveChartData = <BarChartData>[];
   @override
   void initState() {
     loadAsset();
@@ -43,15 +57,59 @@ class _StatsPageState extends State<StatsPage> {
     //drop the first element of each of the sublist
     for (var element in csvTable) {
       element.removeAt(0);
-      for (var entry in element.asMap().entries) {
-        if (entry.key == 3) {
-          if (entry.value == 1.0) {
-            total_positive++;
-          } else {
-            total_negative++;
-          }
+
+      var stringDate = element[0].toString();
+
+      //find + symbol
+      var index = stringDate.indexOf('+');
+
+      //check if + symbol is present
+      if (index != -1) {
+        var date = DateTime.parse(stringDate);
+
+        element[0] = date;
+      }
+      var val = element.elementAt(3);
+      if (val == 1.0) {
+        total_positive++;
+      } else {
+        total_negative++;
+      }
+    }
+
+    //group by date into negative_line and positive_line
+    var temp = csvTable.skip(1);
+    for (var element in temp) {
+      var date = element[0];
+
+      //remove the time from the date
+      date = DateTime(date.year, date.month, date.day);
+      var val = element.elementAt(3);
+      if (val == 1.0) {
+        if (positive_line.containsKey(date)) {
+          positive_line[date] = positive_line[date]! + 1;
+        } else {
+          positive_line[date] = 1;
+        }
+      } else {
+        if (negative_line.containsKey(date)) {
+          negative_line[date] = negative_line[date]! + 1;
+        } else {
+          negative_line[date] = 1;
         }
       }
+    }
+
+    for (var i = 0; i < 5; i++) {
+      int randomNegative = Random().nextInt(100) + 1;
+      int randomPositive = Random().nextInt(100) + 1;
+
+      var randomKeyword = 'keyword $i';
+
+      negativeChartData
+          .add(BarChartData('Negative ' + randomKeyword, randomNegative));
+      positiveChartData
+          .add(BarChartData('Positive ' + randomKeyword, randomPositive));
     }
 
     setState(() {
@@ -114,7 +172,7 @@ class _StatsPageState extends State<StatsPage> {
                       children: [
                         //show drop down menu for social media
                         DropdownButton<String>(
-                          value: 'Twitter',
+                          value: selected_social.toUpperCase(),
                           icon: const Icon(Icons.arrow_downward),
                           iconSize: 24,
                           elevation: 16,
@@ -132,10 +190,10 @@ class _StatsPageState extends State<StatsPage> {
                             }
                           },
                           items: <String>[
-                            'Twitter',
-                            'Facebook',
-                            'Instagram',
-                            'Reddit'
+                            'Twitter'.toUpperCase(),
+                            'Facebook'.toUpperCase(),
+                            'Instagram'.toUpperCase(),
+                            'Reddit'.toUpperCase()
                           ].map<DropdownMenuItem<String>>((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
@@ -296,6 +354,78 @@ class _StatsPageState extends State<StatsPage> {
             const SizedBox(
               height: 20,
             ),
+
+            //show a sf line chart using negative_line and positive_line
+
+            SfCartesianChart(
+              title: ChartTitle(
+                  text: 'Sentiment Trend over time ( Double tap to zoom )',
+                  textStyle: Get.textTheme.titleMedium!
+                      .copyWith(decoration: TextDecoration.underline)),
+              margin: const EdgeInsets.all(32),
+              zoomPanBehavior: ZoomPanBehavior(
+                  enablePinching: true,
+                  enablePanning: true,
+                  enableDoubleTapZooming: true,
+                  enableSelectionZooming: true,
+                  enableMouseWheelZooming: true),
+              primaryXAxis: DateTimeAxis(
+                  name: 'Date',
+                  majorGridLines: const MajorGridLines(width: 0),
+                  intervalType: DateTimeIntervalType.days,
+                  dateFormat: DateFormat.yMMMMEEEEd()),
+              series: <ChartSeries>[
+                LineSeries<DateTime, DateTime>(
+                    dataSource: negative_line.keys.toList(),
+                    xValueMapper: (DateTime sentiment, _) => sentiment,
+                    yValueMapper: (DateTime sentiment, _) =>
+                        negative_line[sentiment] ?? 0,
+                    name: 'Negative',
+                    color: Colors.red),
+                LineSeries<DateTime, DateTime>(
+                    dataSource: positive_line.keys.toList(),
+                    xValueMapper: (DateTime sentiment, _) => sentiment,
+                    yValueMapper: (DateTime sentiment, _) =>
+                        positive_line[sentiment] ?? 0,
+                    name: 'Positive',
+                    color: Colors.green),
+              ],
+            ),
+
+            SizedBox(
+              height: 20,
+            ),
+
+            //create a bar chat using negativeChartData and positiveChartData
+            SfCartesianChart(
+              title: ChartTitle(
+                  text: 'Most trending keywords',
+                  textStyle: Get.textTheme.titleMedium!
+                      .copyWith(decoration: TextDecoration.underline)),
+              margin: const EdgeInsets.all(32),
+              zoomPanBehavior: ZoomPanBehavior(
+                  enablePinching: true,
+                  enablePanning: true,
+                  enableDoubleTapZooming: true,
+                  enableSelectionZooming: true,
+                  enableMouseWheelZooming: true),
+              series: <ChartSeries>[
+                ColumnSeries<BarChartData, String>(
+                    dataSource: negativeChartData,
+                    xValueMapper: (BarChartData sentiment, _) => sentiment.x,
+                    yValueMapper: (BarChartData sentiment, _) => sentiment.y,
+                    name: 'Negative',
+                    color: Colors.red),
+                ColumnSeries<BarChartData, String>(
+                    dataSource: positiveChartData,
+                    xValueMapper: (BarChartData sentiment, _) => sentiment.x,
+                    yValueMapper: (BarChartData sentiment, _) => sentiment.y,
+                    name: 'Positive',
+                    color: Colors.green),
+              ],
+              primaryXAxis: CategoryAxis(),
+            ),
+
             ExpansionTile(
               leading: Icon(Icons.info_outline),
               title: const Text('Detailed Stats'),
