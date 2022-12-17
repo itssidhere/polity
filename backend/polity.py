@@ -82,7 +82,7 @@ class Twitter(Resource):
         args = parser.parse_args()
 
         tweets = []
-        limit = 10
+        limit = args['limit'] if 'limit' in args else 10
         for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
             if len(tweets) == limit:
                 break
