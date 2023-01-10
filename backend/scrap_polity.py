@@ -5,24 +5,18 @@ import pandas as pd
 from tabulate import tabulate
 import json
 
-query = "https://t.me/fly_global"
+query = "ndp alberta"
 tweets = []
 limit = 100
 
 
-
-for i, item in TelegramChannelScraper(query).get_items():
-    if(i == limit):
+scraper = RedditSearchScraper(query)
+for i, item in enumerate(scraper.get_items()):
+    if i > limit:
         break
-    print(item)
 
-# scraper = RedditSearchScraper(query)
-# for i, item in enumerate(scraper.get_items()):
-#     if i > limit:
-#         break
-
-#     try:
-#         print(item.json())
-#         print('-----------------')
-#     except:
-#         pass
+    try:
+        print(item.json())
+        print('-----------------')
+    except:
+        pass

@@ -10,6 +10,7 @@ import nltk
 from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+import os
 
 import datetime
 import snscrape.modules.twitter as sntwitter
@@ -43,8 +44,10 @@ def remove_noise(tweet_tokens, stop_words=()):
 
 
 def predict(tweet):
+    dir = os.path.dirname(__file__)
+    filename = os.path.join(dir, 'my_classifier.pickle')
     f = open(
-        'C://Users//siddharth//projects//polity//backend//my_classifier.pickle', 'rb')
+        filename, 'rb')
     classifier = pickle.load(f)
     custom_tokens = remove_noise(word_tokenize(tweet))
     result = classifier.prob_classify(
