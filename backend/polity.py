@@ -14,6 +14,7 @@ import os
 
 import datetime
 import snscrape.modules.twitter as sntwitter
+from snscrape.modules.reddit import RedditSearchScraper
 
 
 app = Flask(__name__)
@@ -81,11 +82,13 @@ class Twitter(Resource):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument('query', required=True)
+        parser.add_argument('limit', required=False, type=int)
 
         args = parser.parse_args()
 
         tweets = []
         limit = args['limit'] if 'limit' in args else 10
+
         for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
             if len(tweets) == limit:
                 break
@@ -98,9 +101,44 @@ class Twitter(Resource):
         return {'tweets': tweets}
 
 
+class Reddit(Resource):
+    def post(self):
+        return {'message': 'Hello, Welcome to the reddit page'}
+
+    def get(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('query', required=True)
+        parser.add_argument('limit', required=False, type=int)
+
+        args = parser.parse_args()
+
+        reddits = []
+        limit = args['limit'] if 'limit' in args else 10
+
+        scrapper = RedditSearchScraper(args['query'])
+
+        for i, item in enumerate(scrapper.get_items()):
+            if i > limit:
+                break
+
+            try:
+                data = {'body': item.body,
+                        'url': item.url,
+                        'date': datetime.datetime.strftime(
+                            item.date, '%Y-%m-%d %H:%M:%S'), 'uid': item.author, 'sentiment': predict(item.body)}
+                reddits.append(data)
+            except:
+                pass
+
+        print(reddits)
+
+        return {'reddits': reddits}
+
+
 api.add_resource(Users, '/users')
 api.add_resource(Prediction, '/prediction')
 api.add_resource(Twitter, '/twitter')
+api.add_resource(Reddit, '/reddit')
 
 if __name__ == '__main__':
     app.run(debug=False)

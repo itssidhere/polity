@@ -7,7 +7,7 @@ import json
 
 query = "ndp alberta"
 tweets = []
-limit = 100
+limit = 10
 
 
 scraper = RedditSearchScraper(query)
@@ -16,7 +16,7 @@ for i, item in enumerate(scraper.get_items()):
         break
 
     try:
-        print(item.json())
+        print(item.url)
         print('-----------------')
     except:
         pass

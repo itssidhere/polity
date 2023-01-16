@@ -11,16 +11,17 @@ class Sentiment {
     final neutral = json['neutral'] ?? 0.0;
     final positive = json['positive'] ?? 0.0;
     return Sentiment(
-      negative: negative as double,
+      negative: double.parse((negative.toStringAsFixed(2))),
       neutral: neutral as double,
-      positive: positive as double,
+      positive: double.parse((positive.toStringAsFixed(2))),
     );
   }
 }
 
 abstract class Post {
-  late String userid;
+  late String uid;
   late String content;
   late DateTime date;
   late Sentiment sentiment;
+  late String url;
 }

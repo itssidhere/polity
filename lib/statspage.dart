@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:polity/model/post.dart';
+import 'package:polity/model/reddit.dart';
 import 'package:polity/model/twitter.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:syncfusion_flutter_charts/sparkcharts.dart';
@@ -31,11 +32,12 @@ class _StatsPageState extends State<StatsPage> {
   // one week old timestamp
   var from = DateTime.now().subtract(const Duration(days: 7));
   var to = DateTime.now();
-  var selected_social = 'twitter';
-  var input_keywords = <String>[];
+  var selected_social = 'reddit';
+  var input_keywords = <String>['elon musk', 'tesla', 'bitcoin'];
   var total_negative = 0;
   var total_positive = 0;
   var scrollController = ScrollController();
+  var loading = false.obs;
 
   Map<DateTime, int> negative_line = <DateTime, int>{};
   Map<DateTime, int> positive_line = <DateTime, int>{};
@@ -44,29 +46,43 @@ class _StatsPageState extends State<StatsPage> {
   var positiveChartData = <BarChartData>[];
   @override
   void initState() {
-    loadAsset();
+    loadAsset(keyword: input_keywords[0]);
     super.initState();
   }
 
-  Future<List<Tweets>> getDataFromTwitter({required String keyword}) async {
-    var url = 'http://127.0.0.1:5000/twitter?query=${keyword}';
-    var response = await Dio().get(url);
-    var data = <Tweets>[];
+  Future<List<Post>> getDataFromAPI(
+      {required String keyword, int limit = 20}) async {
+    //add second argument to the url limit to 1000
 
-    for (var i = 0; i < response.data['tweets'].length; i++) {
-      data.add(Tweets.fromJson(response.data['tweets'][i]));
+    var data = <Post>[];
+    if (selected_social == "twitter") {
+      var url = 'http://127.0.0.1:5000/twitter?query=${keyword}&limit=${limit}';
+      var response = await Dio().get(url);
+
+      for (var i = 0; i < response.data['tweets'].length; i++) {
+        data.add(Tweets.fromJson(response.data['tweets'][i]));
+      }
+    } else {
+      var url = 'http://127.0.0.1:5000/reddit?query=${keyword}&limit=${limit}';
+      var response = await Dio().get(url);
+
+      for (var i = 0; i < response.data['reddits'].length; i++) {
+        data.add(Reddits.fromJson(response.data['reddits'][i]));
+      }
     }
 
     return data;
-
-    // print(response.data['tweets'][0]);
-
-    // return [];
   }
 
-  Future<void> loadAsset() async {
+  Future<void> loadAsset({String keyword = 'elon musk'}) async {
     //load the json file
-    tableData = await getDataFromTwitter(keyword: 'ndp');
+    loading.value = true;
+    tableData = await getDataFromAPI(keyword: keyword);
+    loading.value = false;
+
+    setState(() {
+      tableData.sort((a, b) => b.date.compareTo(a.date));
+    });
 
     //drop the first element of each of the sublist
     for (var element in tableData) {
@@ -87,6 +103,34 @@ class _StatsPageState extends State<StatsPage> {
           .add(BarChartData('Negative ' + randomKeyword, randomNegative));
       positiveChartData
           .add(BarChartData('Positive ' + randomKeyword, randomPositive));
+    }
+
+    negative_line.clear();
+    positive_line.clear();
+
+    // get all the dates from from to to range and set them to 0 in negative_line and positive_line
+    var date = from;
+    while (date.isBefore(to)) {
+      var d = DateTime(date.year, date.month, date.day);
+      negative_line[d] = 0;
+      positive_line[d] = 0;
+      date = date.add(const Duration(days: 1));
+    }
+
+    // fill negative_line and positive_line
+
+    for (var i = 0; i < tableData.length; i++) {
+      var d = tableData[i].date;
+      var date = DateTime(d.year, d.month, d.day);
+      var sentiment = tableData[i].sentiment;
+
+      if (sentiment.negative > sentiment.positive) {
+        negative_line[date] = (negative_line[date] ?? 0) + 1;
+        positive_line[date] = (positive_line[date] ?? 0);
+      } else {
+        positive_line[date] = (positive_line[date] ?? 0) + 1;
+        negative_line[date] = (negative_line[date] ?? 0);
+      }
     }
 
     setState(() {
@@ -116,13 +160,22 @@ class _StatsPageState extends State<StatsPage> {
                       height: 50,
                     ),
                     Text(
-                      'Welcome to the Stats Page',
+                      'POLITY IQ',
                       style: Get.textTheme.headlineMedium!
                           .copyWith(color: Colors.white),
                     ),
-                    Text('Stay updated with the latest trends on Social Media',
-                        style: Get.textTheme.bodyText1!
-                            .copyWith(color: Colors.white)),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      child: Text(
+                        "Welcome to Polity IQ. Polity's proprietary AI sentiment analysis engine will help you understand the public's opinion on a topic of your choice. Use Polity IQ to run a modern, smarter, and more efficient campaign.",
+                        style: Get.textTheme.titleMedium!
+                            .copyWith(color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
 
                     SizedBox(
                       height: 20,
@@ -130,7 +183,7 @@ class _StatsPageState extends State<StatsPage> {
                     //learn more button
                     ElevatedButton(
                       onPressed: () async {},
-                      child: const Text('Learn More'),
+                      child: const Text('Methodology and FAQ'),
                     ),
 
                     SizedBox(
@@ -237,7 +290,7 @@ class _StatsPageState extends State<StatsPage> {
                             child: const Divider(
                           color: Colors.white54,
                         )),
-                        Text("KEYWORDS", style: TextStyle(color: Colors.white)),
+                        Text("HISTORY", style: TextStyle(color: Colors.white)),
                         Expanded(
                             child: Divider(
                           color: Colors.white54,
@@ -258,10 +311,11 @@ class _StatsPageState extends State<StatsPage> {
                           for (var keyword in input_keywords)
                             Chip(
                               label: Text(keyword),
-                              deleteIcon: const Icon(Icons.close),
+                              deleteButtonTooltipMessage: 'Search Again',
+                              deleteIcon: const Icon(Icons.history),
                               onDeleted: () {
                                 setState(() {
-                                  input_keywords.remove(keyword);
+                                  loadAsset(keyword: keyword);
                                 });
                               },
                             )
@@ -280,6 +334,7 @@ class _StatsPageState extends State<StatsPage> {
               child: TextField(
                 onSubmitted: (value) {
                   setState(() {
+                    loadAsset(keyword: value);
                     input_keywords.add(value);
                   });
                 },
@@ -293,16 +348,19 @@ class _StatsPageState extends State<StatsPage> {
                                   ? FontAwesomeIcons.instagram
                                   : FontAwesomeIcons.reddit,
                     ),
-                    suffixIcon: Icon(Icons.add),
+                    suffixIcon: Icon(Icons.search),
                     border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(32)),
                     ),
-                    hintText: 'Add a keyword'),
+                    hintText: 'Search a candidate, issue, policy or topic'),
               ),
             ),
 
             SizedBox(
               height: 20,
+            ),
+            Obx(
+              () => loading.value ? CircularProgressIndicator() : Container(),
             ),
             //show a sf pie chart with positive, negative sentiments
             SfCircularChart(
@@ -348,20 +406,24 @@ class _StatsPageState extends State<StatsPage> {
                   name: 'Date',
                   majorGridLines: const MajorGridLines(width: 0),
                   intervalType: DateTimeIntervalType.days,
-                  dateFormat: DateFormat.yMMMMEEEEd()),
+                  dateFormat: DateFormat.d()),
               series: <ChartSeries>[
                 LineSeries<DateTime, DateTime>(
-                    dataSource: negative_line.keys.toList(),
+                    dataSource: negative_line.keys.toList()
+                      ..sort((a, b) => a
+                          .difference(b)
+                          .inDays), //sort the dates in ascending order
                     xValueMapper: (DateTime sentiment, _) => sentiment,
                     yValueMapper: (DateTime sentiment, _) =>
-                        negative_line[sentiment] ?? 0,
+                        negative_line[sentiment],
                     name: 'Negative',
                     color: Colors.red),
                 LineSeries<DateTime, DateTime>(
-                    dataSource: positive_line.keys.toList(),
+                    dataSource: positive_line.keys.toList()
+                      ..sort((a, b) => a.difference(b).inDays),
                     xValueMapper: (DateTime sentiment, _) => sentiment,
                     yValueMapper: (DateTime sentiment, _) =>
-                        positive_line[sentiment] ?? 0,
+                        positive_line[sentiment],
                     name: 'Positive',
                     color: Colors.green),
               ],
@@ -425,8 +487,10 @@ class _StatsPageState extends State<StatsPage> {
                   PaginatedDataTable(
                     columns: [
                       DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('UID')),
                       DataColumn(label: Text('Positive')),
                       DataColumn(label: Text('Negative')),
+                      DataColumn(label: Text('Content'))
                     ],
                     source: TweetDataTableSource(tableData),
                   ),
@@ -454,9 +518,17 @@ class TweetDataTableSource extends DataTableSource {
       index: index,
       cells: [
         DataCell(Text(data[index].date.toString())),
-        DataCell(Text(data[index].userid.toString())),
+        DataCell(TextButton(
+            onPressed: () {
+              launchUrlString(data[index].url.toString());
+            },
+            child: Text(data[index].uid.toString()))),
         DataCell(Text(data[index].sentiment.positive.toString())),
         DataCell(Text(data[index].sentiment.negative.toString())),
+        DataCell(ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Text(data[index].content.toString()),
+        )),
       ],
     );
   }
