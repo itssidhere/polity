@@ -51,21 +51,22 @@ class _StatsPageState extends State<StatsPage> {
   }
 
   Future<List<Post>> getDataFromAPI(
-      {required String keyword, int limit = 10}) async {
+      {required String keyword, int limit = 25}) async {
     //add second argument to the url limit to 1000
-
+    var baseUrl =
+        'https://34a8-2001-56a-f9bf-2e00-8df3-6f4d-f32e-1efc.ngrok.io/';
     var data = <Post>[];
     if (selected_social == "twitter") {
       var query =
           "$keyword since:${DateFormat('yyyy-MM-dd').format(from)} until:${DateFormat('yyyy-MM-dd').format(to)}";
-      var url = 'http://127.0.0.1:5000/twitter?query=${query}&limit=${limit}';
+      var url = '${baseUrl}/twitter?query=${query}&limit=${limit}';
       var response = await Dio().get(url);
 
       for (var i = 0; i < response.data['tweets'].length; i++) {
         data.add(Tweets.fromJson(response.data['tweets'][i]));
       }
     } else {
-      var url = 'http://127.0.0.1:5000/reddit?query=${keyword}&limit=${limit}';
+      var url = '${baseUrl}/reddit?query=${keyword}&limit=${limit}';
       var response = await Dio().get(url);
 
       for (var i = 0; i < response.data['reddits'].length; i++) {

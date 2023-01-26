@@ -11,7 +11,7 @@ from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 import os
-
+from flask_cors import CORS
 import datetime
 import snscrape.modules.twitter as sntwitter
 from snscrape.modules.reddit import RedditSearchScraper
@@ -19,6 +19,7 @@ from snscrape.modules.reddit import RedditSearchScraper
 
 app = Flask(__name__)
 api = Api(app)
+CORS(app)
 
 
 def remove_noise(tweet_tokens, stop_words=()):
