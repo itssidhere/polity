@@ -438,7 +438,7 @@ class _StatsPageState extends State<StatsPage> {
             //create a bar chat using negativeChartData and positiveChartData
             SfCartesianChart(
               title: ChartTitle(
-                  text: 'Most trending keywords',
+                  text: 'Most trending keywords (Future work)',
                   textStyle: Get.textTheme.titleMedium!
                       .copyWith(decoration: TextDecoration.underline)),
               margin: const EdgeInsets.all(32),

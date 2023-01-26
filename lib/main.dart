@@ -17,6 +17,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       routes: {
+        '/': (context) => const StatsPage(),
         '/stats': (context) => const StatsPage(),
       },
       theme: ThemeData(
