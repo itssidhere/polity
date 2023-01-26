@@ -17,13 +17,12 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       routes: {
-        '/': (context) => const StatsPage(),
         '/stats': (context) => const StatsPage(),
       },
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MainPage(),
+      home: const StatsPage(),
     );
   }
 }

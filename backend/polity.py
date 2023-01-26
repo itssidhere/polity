@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_restful import Resource, Api, reqparse
 import pandas as pd
 import numpy as np
@@ -80,16 +80,18 @@ class Twitter(Resource):
         return {'message': 'Hello, Welcome to the twitter page'}
 
     def get(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('query', required=True)
-        parser.add_argument('limit', required=False, type=int)
+        query = request.args.get('query', type=str)
+        limit = request.args.get('limit', type=int)
+        # parser = reqparse.RequestParser()
+        # parser.add_argument('query', required=True)
+        # parser.add_argument('limit', required=False, type=int)
 
-        args = parser.parse_args()
+        # args = parser.parse_args()
 
         tweets = []
-        limit = args['limit'] if 'limit' in args else 10
+        limit = limit if limit else 10
 
-        for tweet in sntwitter.TwitterSearchScraper(args['query']).get_items():
+        for tweet in sntwitter.TwitterSearchScraper(query).get_items():
             if len(tweets) == limit:
                 break
             else:
@@ -106,16 +108,18 @@ class Reddit(Resource):
         return {'message': 'Hello, Welcome to the reddit page'}
 
     def get(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('query', required=True)
-        parser.add_argument('limit', required=False, type=int)
+        query = request.args.get('query', type=str)
+        limit = request.args.get('limit', type=int)
+        # parser = reqparse.RequestParser()
+        # parser.add_argument('query', required=True)
+        # parser.add_argument('limit', required=False, type=int)
 
-        args = parser.parse_args()
+        # args = parser.parse_args()
 
         reddits = []
-        limit = args['limit'] if 'limit' in args else 10
+        limit = limit if limit else 10
 
-        scrapper = RedditSearchScraper(args['query'])
+        scrapper = RedditSearchScraper(query)
 
         for i, item in enumerate(scrapper.get_items()):
             if i > limit:
@@ -129,8 +133,6 @@ class Reddit(Resource):
                 reddits.append(data)
             except:
                 pass
-
-        print(reddits)
 
         return {'reddits': reddits}
 
