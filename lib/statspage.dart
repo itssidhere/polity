@@ -221,8 +221,8 @@ class _StatsPageState extends State<StatsPage> {
                           },
                           items: <String>[
                             'Twitter'.toUpperCase(),
-                            'Facebook'.toUpperCase(),
-                            'Instagram'.toUpperCase(),
+                            // 'Facebook'.toUpperCase(),
+                            // 'Instagram'.toUpperCase(),
                             'Reddit'.toUpperCase()
                           ].map<DropdownMenuItem<String>>((String value) {
                             return DropdownMenuItem<String>(
