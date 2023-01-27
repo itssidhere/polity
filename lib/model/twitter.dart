@@ -21,7 +21,7 @@ class Tweets extends Post {
       content: json['tweet'] as String,
       date: DateTime.parse(json['date'] as String),
       sentiment: Sentiment.fromJson(json['sentiment'] as Map<String, dynamic>),
-      url: ('https://twitter.com/${uid}}') as String,
+      url: 'https://twitter.com/${uid}',
     );
   }
 }

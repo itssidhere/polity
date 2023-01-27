@@ -33,7 +33,7 @@ class _StatsPageState extends State<StatsPage> {
   var from = DateTime.now().subtract(const Duration(days: 7));
   var to = DateTime.now();
   var selected_social = 'twitter';
-  var input_keywords = <String>['elon musk', 'tesla', 'bitcoin'];
+  var input_keywords = <String>['bitcoin', 'tesla', 'university of alberta'];
   var total_negative = 0;
   var total_positive = 0;
   var scrollController = ScrollController();
@@ -46,12 +46,12 @@ class _StatsPageState extends State<StatsPage> {
   var positiveChartData = <BarChartData>[];
   @override
   void initState() {
-    loadAsset(keyword: input_keywords[0]);
+    loadAsset(keyword: input_keywords[input_keywords.length - 1]);
     super.initState();
   }
 
   Future<List<Post>> getDataFromAPI(
-      {required String keyword, int limit = 25}) async {
+      {required String keyword, int limit = 100}) async {
     //add second argument to the url limit to 1000
     var baseUrl =
         'https://34a8-2001-56a-f9bf-2e00-8df3-6f4d-f32e-1efc.ngrok.io/';
@@ -77,7 +77,7 @@ class _StatsPageState extends State<StatsPage> {
     return data;
   }
 
-  Future<void> loadAsset({String keyword = 'elon musk'}) async {
+  Future<void> loadAsset({String keyword = 'university of alberta'}) async {
     //load the json file
     loading.value = true;
     tableData = await getDataFromAPI(keyword: keyword);
@@ -87,6 +87,8 @@ class _StatsPageState extends State<StatsPage> {
       tableData.sort((a, b) => b.date.compareTo(a.date));
     });
 
+    total_positive = 0;
+    total_negative = 0;
     //drop the first element of each of the sublist
     for (var element in tableData) {
       if (element.sentiment.negative > element.sentiment.positive) {
@@ -331,6 +333,16 @@ class _StatsPageState extends State<StatsPage> {
             ),
 
             //show a search bar
+            SizedBox(
+              height: 20,
+            ),
+            Text(
+                'Showing results for ${input_keywords[input_keywords.length - 1]}',
+                style: Get.textTheme.titleMedium),
+            SizedBox(
+              height: 20,
+            ),
+
             Container(
               padding: const EdgeInsets.all(8.0),
               width: Get.width * 0.3,
@@ -368,7 +380,8 @@ class _StatsPageState extends State<StatsPage> {
             //show a sf pie chart with positive, negative sentiments
             SfCircularChart(
               title: ChartTitle(
-                  text: 'Distribution of Sentiments',
+                  text:
+                      'Distribution of Sentiments (Limited to 100 data points)',
                   textStyle: Get.textTheme.titleMedium!
                       .copyWith(decoration: TextDecoration.underline)),
               margin: const EdgeInsets.all(10),
@@ -409,7 +422,7 @@ class _StatsPageState extends State<StatsPage> {
                   name: 'Date',
                   majorGridLines: const MajorGridLines(width: 0),
                   intervalType: DateTimeIntervalType.days,
-                  dateFormat: DateFormat.d()),
+                  dateFormat: DateFormat.yMd()),
               series: <ChartSeries>[
                 LineSeries<DateTime, DateTime>(
                     dataSource: negative_line.keys.toList()
@@ -468,6 +481,7 @@ class _StatsPageState extends State<StatsPage> {
 
             ExpansionTile(
               leading: Icon(Icons.info_outline),
+              initiallyExpanded: true,
               title: const Text('Detailed Stats'),
               subtitle: const Text('Click to view the detailed stats'),
               onExpansionChanged: (value) {
@@ -529,7 +543,7 @@ class TweetDataTableSource extends DataTableSource {
         DataCell(Text(data[index].sentiment.positive.toString())),
         DataCell(Text(data[index].sentiment.negative.toString())),
         DataCell(ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
+          constraints: const BoxConstraints(maxWidth: 600),
           child: Text(data[index].content.toString()),
         )),
       ],
